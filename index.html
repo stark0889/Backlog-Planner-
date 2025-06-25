@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>JEE Backlog Planner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      background: #f7fafc;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 24px 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    h1 {
+      text-align: center;
+      color: #1a73e8;
+      margin-bottom: 24px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    label {
+      font-size: 1em;
+    }
+    input[type="number"] {
+      margin-top: 4px;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #bdbdbd;
+      font-size: 1em;
+    }
+    button {
+      padding: 10px;
+      background: #1a73e8;
+      color: #fff;
+      font-size: 1em;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 6px;
+    }
+    button:hover {
+      background: #1664c1;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+      background: #f9fbe7;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 8px 6px;
+      border-bottom: 1px solid #e0e0e0;
+      text-align: center;
+    }
+    th {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+    tr:last-child td {
+      border-bottom: none;
+    }
+    .summary {
+      background: #e3f2fd;
+      padding: 10px 8px;
+      border-radius: 8px;
+      margin-top: 8px;
+      font-size: 1em;
+      color: #1565c0;
+    }
+    @media (max-width: 600px) {
+      .container {
+        margin: 12px;
+        padding: 10px;
+      }
+      table, th, td {
+        font-size: 0.95em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>JEE Backlog Planner</h1>
+    <form id="plannerForm">
+      <label>
+        Average Lecture Length (minutes):
+        <input type="number" id="avgLen" value="50" min="1" required>
+      </label>
+      <label>
+        Total Backlog Lectures:
+        <input type="number" id="backlog" value="30" min="0" required>
+      </label>
+      <label>
+        New Lectures per Day (except Sunday):
+        <input type="number" id="newPerDay" value="1" min="0" required>
+      </label>
+      <label>
+        Max Lectures You Can Watch Daily:
+        <input type="number" id="maxPerDay" value="3" min="1" required>
+      </label>
+      <button type="submit">Generate Plan</button>
+    </form>
+    <div id="output"></div>
+  </div>
+  <script>
+    document.getElementById('plannerForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const avgLen = +document.getElementById('avgLen').value;
+      const backlog = +document.getElementById('backlog').value;
+      const newPerDay = +document.getElementById('newPerDay').value;
+      const maxPerDay = +document.getElementById('maxPerDay').value;
+
+      let plan = [];
+      let day = 1, todayBacklog = backlog;
+      let date = new Date();
+      let totalLectures = 0;
+      while (todayBacklog > 0 || day === 1) {
+        const isSunday = date.getDay() === 0;
+        const newLectures = isSunday ? 0 : newPerDay;
+        const lecturesToday = Math.min(maxPerDay, todayBacklog + newLectures);
+        const backlogDone =
+          lecturesToday > newLectures
+            ? Math.min(todayBacklog, lecturesToday - newLectures)
+            : 0;
+        const newDone = Math.min(newLectures, lecturesToday - backlogDone);
+
+        plan.push({
+          day,
+          date: date.toDateString(),
+          backlog: backlogDone,
+          new: newDone,
+          isSunday,
+        });
+
+        todayBacklog -= backlogDone;
+        totalLectures += backlogDone + newDone;
+        if (todayBacklog <= 0 && newLectures === 0) break;
+        date.setDate(date.getDate() + 1);
+        day++;
+      }
+
+      // Output
+      let html = '<h2>Your Plan</h2><table><tr><th>Day</th><th>Date</th><th>Backlog</th><th>New</th><th>Notes</th></tr>';
+      plan.forEach(entry => {
+        html += `<tr>
+          <td>${entry.day}</td>
+          <td>${entry.date}</td>
+          <td>${entry.backlog}</td>
+          <td>${entry.new}</td>
+          <td>${entry.isSunday ? "Sunday (No new lectures)" : ""}</td>
+        </tr>`;
+      });
+      html += '</table>';
+      html += `<div class="summary"><strong>Total Lectures:</strong> ${totalLectures}<br>
+               <strong>Total Days:</strong> ${plan.length}<br>
+               <strong>Total Time:</strong> ${Math.floor(totalLectures * avgLen / 60)} hours ${totalLectures * avgLen % 60} minutes</div>`;
+
+      document.getElementById('output').innerHTML = html;
+    });
+  </script>
+</body>
+</html>
